@@ -7,8 +7,8 @@ This fork adapts rfid-poker for a **10-player** Texas Hold'em home game with a *
 | Phase | Status |
 |---|---|
 | 0. Server and simulator on the Mac | Done |
-| 1. Multi-card read test (Core2 + 1 reader) | Not started |
-| 2. Buy hardware | Waiting on Phase 1 |
+| 1. Multi-card read test (Core2 + 1 reader) | Done: **Path A** (1 reader per seat) |
+| 2. Buy hardware | Next (Path A list) |
 | 3. Firmware | Not started |
 | 4. Bridge and server on macOS | Not started |
 | 5. Table install | Not started |
@@ -41,6 +41,32 @@ This fork adapts rfid-poker for a **10-player** Texas Hold'em home game with a *
   - The overlay now also empties when a game is cleared. It used to keep showing the last hand.
 - **Muck bug:** a mucked hand whose cards share a rank or suit (e.g. A♠ A♥) isn't folded. `server_http_card.go` only counts the second card as new when both rank *and* suit differ. Still to fix.
 - **Device IDs must not contain `-`.** The server splits antenna serials as `<device_id>-<pair_id>`.
+
+### Phase 1 results (Oct 2026): Path A
+Test firmware: [`clients/m5stack-core2-tagtest`](../../clients/m5stack-core2-tagtest/). It ran on a Core2 with one RFID Unit 2 on Port A, using two Ultralight EV1 cards.
+
+**Resting stack, centred:** both cards were read in **160 of 160 scans** over 33 s, with no failed reads.
+
+**Lift-and-place trials:**
+
+| Placement | Real placements | Notes |
+|---|---|---|
+| 1. Centred | **41/41** | Both cards read in the first scan every time |
+| 2. Offset / fanned | Not run | Skipped |
+| 3. Through the table surface | **25/26** | One stack had a single card read for ~3 s and the other never |
+
+The on-screen totals were 41/50 and 25/27. The difference is "phantom" trials: when a stack is lifted away, a card can pass through range for one scan and the test counts that as a new placement that then fails. These show in the log as one single-card scan followed by an empty reader.
+
+**Decision:** Path A, one reader per seat. A resting stack reads reliably, and real placements are read on the first scan. The one real miss through the surface shows the signal margin is thinner there, so Phase 5 should:
+- Keep the material over each reader thin, or recess the reader.
+- Give each seat a marked card spot or pocket so cards land centred. This also covers the untested offset/fanned case.
+
+**Firmware fixes found during the test.** Phase 3 must carry these over:
+1. **Vendored library fix.** The vendored `MFRC522_I2C` has a fix in `PICC_Select`. The original set the collision bit in the wrong byte whenever two UIDs first differed on a byte boundary, so that pair of cards failed every time.
+2. **Reset the field each scan.** Switch the RF field off for 5 ms and on for 5 ms at the start of every scan. Relying on WUPA to wake cards halted by the previous scan left them asleep after one read.
+3. **Reset after a failed select.** A failed anticollision select leaves the cards half-selected, ignoring REQA, so the field is reset again and the read retried. Before this fix, a resting stack was read in only 51% of scans.
+4. **I2C bus recovery at boot.** If the ESP32 resets mid-transfer (e.g. a serial monitor opening the port), the reader can hold SDA low. At boot, clock SCL until SDA is released, retry for 2 s, then power-cycle Port A.
+5. **Scan rate.** About 5 scans/s with two cards present: each HALT and the final REQA wait out the 25 ms timeout. That's fine for a seat, and shortening the timeout would speed it up.
 
 ## Starting point
 - **Hardware on hand:** 1× M5Stack Core2, 8× M5Stack RFID Unit 2 (WS1850S), 1 deck of MIFARE Ultralight EV1 cards.
@@ -102,7 +128,11 @@ Generic fixes (Core2 target, macOS bridge, compose, equity, Dockerfile arch) are
 - **Pass:** Path A, 1 reader per seat.
 - **Fail:** Path B, 2 readers per seat in a two-slot card holder.
 
+**Outcome: Path A** (see Phase 1 results above).
+
 ### Phase 2: Buy hardware
+**Path A was chosen, so buy from the Path A column.** Path B is kept for reference.
+
 | Item | Path A (1 reader/seat) | Path B (2 readers/seat) |
 |---|---|---|
 | Atom Lite / AtomS3 Lite | 10 | 10 |
