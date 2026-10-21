@@ -2,6 +2,14 @@
 
 ![demo](./docs/media/demo.gif)
 
+> **Home table fork.** This fork of [whywaita/rfid-poker](https://github.com/whywaita/rfid-poker) is being adapted for a 10-player home game streamed with OBS. See the [build plan](./docs/home-table/build-plan.md) for the hardware design, costs, phases and progress.
+>
+> Changes so far:
+> - `docker compose` setup for running on a Mac.
+> - A table simulator.
+> - Faster equity: preflop is sampled, and recalculations are collapsed.
+> - A native arm64 Docker image.
+
 ## Requirements
 
 - M5Stack + RFID module
@@ -26,7 +34,38 @@ card_ids:  ## UID of NEC card
   ...
 ```
 
-### Run the server
+### Run the server with Docker Compose
+
+`docker-compose.yml` starts MySQL and the server together. It runs migrations at startup and needs no other setup.
+
+```bash
+# Uses config.dev.yaml (synthetic card UIDs) by default
+$ docker compose up -d --build
+
+# Use your scanned deck, and/or a different host port (default 8080)
+$ CARD_CONFIG=./config.yaml RFID_POKER_PORT=8081 docker compose up -d --build
+```
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CARD_CONFIG` | `./config.dev.yaml` | Card UID config mounted into the server |
+| `RFID_POKER_PORT` | `8080` | Host port for the server and WebSocket (`ws://localhost:<port>/ws`) |
+| `RFID_POKER_CLIENT_TIMEOUT_SECONDS` | `10` | Auto-clear timeout; `0` disables it |
+
+### Simulate a table
+
+`scripts/sim-table` needs no hardware. It plays a whole table against a running server that's using `config.dev.yaml`:
+- registers N seats and a board,
+- deals full hands,
+- logs how long equity takes to reach WebSocket clients after each street.
+
+```bash
+$ go run ./scripts/sim-table -host http://localhost:8080 -players 10 -hands 5
+```
+
+It leaves the last hand on the table, so you can look at it in the UI, for example `/broadcast?override-api-url=ws://localhost:8080`. Start the server with `RFID_POKER_CLIENT_TIMEOUT_SECONDS=0`, or the hand is cleared after 10 seconds with no card reads.
+
+### Run the server without Docker
 
 Run the server using the following environment variables
 
@@ -59,6 +98,12 @@ The server is a golang application that runs on a server.
 #### `GET /ws` (websocket)
 
 The server will upgrade the connection to a websocket. The server send an info about players to the client.
+
+How equity is calculated:
+- **Preflop:** estimated from 20,000 sampled run-outs (about ±0.7%).
+- **Flop onwards:** calculated exactly over every run-out.
+- **Split pots:** shared between the tied players, so equities sum to 1.
+- **Recalculation:** one runs at a time. Card reads that arrive during a calculation collapse into a single follow-up run.
 
 The body of the message is as follows:
 

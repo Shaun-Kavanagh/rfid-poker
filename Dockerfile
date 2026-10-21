@@ -5,7 +5,8 @@ WORKDIR /go/github.com/whywaita/rfid-poker
 COPY ["./", "./"]
 
 ENV GOOS=linux
-ENV GOARCH=amd64
+ARG TARGETARCH
+ENV GOARCH=${TARGETARCH}
 ENV CGO_ENABLED=0
 
 RUN make build

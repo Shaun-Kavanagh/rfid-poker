@@ -212,12 +212,7 @@ func processCard(ctx context.Context, conn *sql.DB, cc config.Config, uid string
 			}
 			notifyClients()
 
-			go func() {
-				if err := store.CalcEquity(context.Background(), query.New(conn)); err != nil {
-					logger.WarnContext(context.Background(), "calcEquity", "error", err)
-				}
-				notifyClients()
-			}()
+			requestEquityCalc()
 		default:
 			// len(storedCards) >= 2, hand already complete
 			return false, nil
@@ -238,12 +233,7 @@ func processCard(ctx context.Context, conn *sql.DB, cc config.Config, uid string
 			}
 			notifyClients()
 
-			go func() {
-				if err := store.CalcEquity(context.Background(), query.New(conn)); err != nil {
-					logger.WarnContext(context.Background(), "calcEquity", "error", err)
-				}
-				notifyClients()
-			}()
+			requestEquityCalc()
 		default:
 			// Same card or already processed
 			return false, nil
@@ -266,12 +256,7 @@ func processCard(ctx context.Context, conn *sql.DB, cc config.Config, uid string
 		}
 		notifyClients()
 
-		go func() {
-			if err := store.CalcEquity(context.Background(), query.New(conn)); err != nil {
-				logger.WarnContext(context.Background(), "calcEquity", "error", err)
-			}
-			notifyClients()
-		}()
+		requestEquityCalc()
 	case "unknown":
 		logger.WarnContext(ctx, "unknown type antenna", "serial", serial)
 		return false, nil
