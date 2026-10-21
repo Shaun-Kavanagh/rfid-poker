@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -120,12 +119,7 @@ func HandleDeleteAdminPlayerHand(c echo.Context, conn *sql.DB) error {
 
 	notifyClients()
 
-	go func() {
-		if err := store.CalcEquity(context.Background(), query.New(conn)); err != nil {
-			logger.WarnContext(c.Request().Context(), "store.CalcEquity", "error", err)
-		}
-		notifyClients()
-	}()
+	requestEquityCalc()
 
 	return c.JSON(http.StatusNoContent, nil)
 }

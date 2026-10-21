@@ -14,6 +14,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -188,6 +189,11 @@ func waitEquity(updates <-chan server.Send, players, boardCount int, start time.
 				continue
 			}
 			if sum < 0.99 || sum > 1.01 {
+				continue
+			}
+			// Preflop nobody is drawing dead, so a 0% player means equity was computed
+			// before every hand arrived.
+			if boardCount == 0 && slices.ContainsFunc(s.Players, func(p server.SendPlayer) bool { return p.Equity == 0 }) {
 				continue
 			}
 			log.Printf("%-7s equity published in %s (board: %s)", street, time.Since(start).Round(time.Millisecond), formatCards(s.Board))

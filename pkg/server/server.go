@@ -247,6 +247,9 @@ func Run(ctx context.Context) error {
 	// Start game timeout checker
 	startGameTimeoutChecker(ctx, conn)
 
+	// Start equity worker (collapses concurrent recalculation requests)
+	go runEquityWorker(ctx, conn)
+
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.CORSWithConfig(

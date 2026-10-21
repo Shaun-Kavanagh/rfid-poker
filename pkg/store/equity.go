@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
+	"time"
 
 	"github.com/whywaita/poker-go"
 	"github.com/whywaita/rfid-poker/pkg/query"
@@ -82,12 +84,16 @@ func CalcEquity(ctx context.Context, q *query.Queries) error {
 		return nil
 	}
 
-	logger.InfoContext(ctx, "Start EvaluateEquityByMadeHandWithCommunity", "players", players, "board", board)
-	equities, err := poker.EvaluateEquityByMadeHandWithCommunity(players, board)
-	if err != nil {
-		return fmt.Errorf("poker.EvaluateEquityByMadeHandWithCommunity: %w", err)
+	hands := make([][]poker.Card, 0, len(players))
+	for _, p := range players {
+		hands = append(hands, p.Hand)
 	}
-	logger.InfoContext(ctx, "End EvaluateEquityByMadeHandWithCommunity", "equities", equities)
+	start := time.Now()
+	equities, err := estimateEquity(hands, board, rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())))
+	if err != nil {
+		return fmt.Errorf("estimateEquity(): %w", err)
+	}
+	logger.InfoContext(ctx, "Calculated equity", "players", players, "board", board, "equities", equities, "duration", time.Since(start).String())
 
 	for i, p := range playersRow {
 		if err := q.UpdateEquity(ctx, query.UpdateEquityParams{
