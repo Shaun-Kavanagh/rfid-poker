@@ -6,7 +6,7 @@ This fork adapts rfid-poker for a **10-player** Texas Hold'em home game with a *
 
 | Phase | Status |
 |---|---|
-| 0. Server and simulator on the Mac | Done. Equity is fast enough; overlay layout still to fix |
+| 0. Server and simulator on the Mac | Done |
 | 1. Multi-card read test (Core2 + 1 reader) | Not started |
 | 2. Buy hardware | Waiting on Phase 1 |
 | 3. Firmware | Not started |
@@ -34,7 +34,11 @@ This fork adapts rfid-poker for a **10-player** Texas Hold'em home game with a *
   | Flop | 11–23 ms |
   | Turn / river | 4–38 ms |
 - **Split pots** are now shared between the tied players, so equities always sum to 100%. Upstream's poker-go gives each tied player full credit (one 10-handed deal summed to 109%).
-- **`/broadcast` doesn't fit 10 players.** At 1920×1080 seats 1–2 are cut off the top, and the page doesn't render the board. Still to fix.
+- **`/broadcast` didn't fit 10 players.** At 1920×1080 seats 1–2 were cut off the top, and the page didn't render the board.
+  - Fixed: up to 5 players stay in one left column. Larger tables split into left and right columns, keeping the centre clear for the table camera.
+  - The board is shown bottom centre.
+  - Checked at 2, 6 and 10 players.
+  - The overlay now also empties when a game is cleared. It used to keep showing the last hand.
 - **Muck bug:** a mucked hand whose cards share a rank or suit (e.g. A♠ A♥) isn't folded. `server_http_card.go` only counts the second card as new when both rank *and* suit differ. Still to fix.
 - **Device IDs must not contain `-`.** The server splits antenna serials as `<device_id>-<pair_id>`.
 
@@ -78,7 +82,7 @@ This fork adapts rfid-poker for a **10-player** Texas Hold'em home game with a *
 2. Multi-card read per reader, if Path A (firmware, `clients/lib/rfid-poker-common/src/rfid_core.cpp`).
 3. `wired-client` on macOS against several serial ports at once (`cmd/wired-client`, `pkg/serial/`).
 4. `docker-compose.yml` for one-command start on the Mac. **Done.**
-5. Equity speed for 10 hands. **Done.** Also the `/broadcast` layout for 10 players plus the board, which is still to do.
+5. Equity speed for 10 hands, and the `/broadcast` layout for 10 players plus the board. **Done.**
 6. Optional: treat cards removed from a seat reader as a fold.
 
 Generic fixes (Core2 target, macOS bridge, compose, equity, Dockerfile arch) are candidates to send upstream.

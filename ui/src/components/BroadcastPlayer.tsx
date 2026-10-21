@@ -39,6 +39,17 @@ function getCardColor(suit: CardType['suit']) {
     return suit === 'hearts' || suit === 'diamonds' ? 'text-red-600' : 'text-black';
 }
 
+export const BroadcastCard = ({ card, large = false }: { card: CardType; large?: boolean }) => (
+    <div className={`bg-white rounded-lg p-2 shadow-lg border-2 border-gray-300 flex flex-col items-center justify-center ${large ? 'min-w-[72px] h-28' : 'min-w-[50px] h-20'}`}>
+        <div className={`${large ? 'text-[56px]' : 'text-[40px]'} leading-none mb-0.5 ${getCardColor(card.suit)}`}>
+            {ContentSuit(card.suit)}
+        </div>
+        <div className={`${large ? 'text-[48px]' : 'text-[35px]'} font-bold leading-none ${getCardColor(card.suit)}`}>
+            {ContentRank(card.rank)}
+        </div>
+    </div>
+);
+
 const BroadcastPlayer = ({ player }: { player: BroadcastPlayerType }) => {
     if (!player || !player.name || !Array.isArray(player.hand)) {
         return <div></div>;
@@ -60,14 +71,7 @@ const BroadcastPlayer = ({ player }: { player: BroadcastPlayerType }) => {
                 {/* Hand Cards - positioned above the box */}
                 <div className="absolute top-[-20px] left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
                     {player.hand.filter(card => card && card.suit && card.rank).map((card, index) => (
-                        <div key={index} className="bg-white rounded-lg p-2 shadow-lg border-2 border-gray-300 flex flex-col items-center justify-center min-w-[50px] h-20">
-                            <div className={`text-[40px] leading-none mb-0.5 ${getCardColor(card.suit)}`}>
-                                {ContentSuit(card.suit)}
-                            </div>
-                            <div className={`text-[35px] font-bold leading-none ${getCardColor(card.suit)}`}>
-                                {ContentRank(card.rank)}
-                            </div>
-                        </div>
+                        <BroadcastCard key={index} card={card} />
                     ))}
                 </div>
 

@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import BroadcastPlayer, { BroadcastPlayerType } from '@/components/BroadcastPlayer';
+import BroadcastBoard from '@/components/BroadcastBoard';
 import { CardType } from '@/components/Cards';
 import DOMPurify from 'dompurify';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+
+// Player panels are 120px tall with a 24px gap, so 5 fit in a 1080px frame.
+const MAX_PLAYERS_PER_COLUMN = 5;
 
 // Convert PlayerType from WebSocket to BroadcastPlayerType
 function convertToBroadcastPlayer(player: any): BroadcastPlayerType {
@@ -25,6 +29,7 @@ function convertToBroadcastPlayer(player: any): BroadcastPlayerType {
 
 function BroadcastView({ hostname }: { hostname: string }) {
     const [players, setPlayers] = useState<BroadcastPlayerType[]>([]);
+    const [board, setBoard] = useState<CardType[]>([]);
     const [wsError, setWSError] = useState<string | null>(null);
     const [playerStates, setPlayerStates] = useState<Map<string, 'entering' | 'visible' | 'leaving'>>(new Map());
 
@@ -43,8 +48,10 @@ function BroadcastView({ hostname }: { hostname: string }) {
             try {
                 const newData = JSON.parse(event.data);
                 console.log("Received data:", newData);
-                if (newData.players) {
-                    const broadcastPlayers = newData.players.map(convertToBroadcastPlayer);
+                // The server sends null players and board once a game is cleared, so treat null as empty.
+                setBoard(Array.isArray(newData.board) ? newData.board : []);
+                if (newData.players !== undefined) {
+                    const broadcastPlayers = (newData.players || []).map(convertToBroadcastPlayer);
                     
                     // Track new and existing players
                     setPlayerStates(prevStates => {
@@ -113,21 +120,34 @@ function BroadcastView({ hostname }: { hostname: string }) {
         );
     }
 
+    // One column fits 5 players in 1080px; larger tables split into a left and a right column,
+    // keeping the centre of the frame clear for the table camera and the board.
+    const leftCount = players.length > MAX_PLAYERS_PER_COLUMN ? Math.ceil(players.length / 2) : players.length;
+    const columns = [
+        { players: players.slice(0, leftCount), className: 'left-5 items-start' },
+        { players: players.slice(leftCount), className: 'right-5 items-end' },
+    ];
+
     return (
-        <div className="absolute bottom-5 left-5 flex flex-col gap-6">
-            {players.map((player, index) => {
-                const playerState = playerStates.get(player.name) || 'visible';
-                
-                return (
-                    <div 
-                        key={player.name} 
-                        className={`${playerState === 'entering' ? 'animate-slideUp' : 'animate-slideUpComplete'}`}
-                    >
-                        <BroadcastPlayer player={player} />
-                    </div>
-                );
-            })}
-        </div>
+        <>
+            {columns.filter(column => column.players.length > 0).map(column => (
+                <div key={column.className} className={`absolute bottom-5 ${column.className} flex flex-col gap-6`}>
+                    {column.players.map((player) => {
+                        const playerState = playerStates.get(player.name) || 'visible';
+
+                        return (
+                            <div
+                                key={player.name}
+                                className={`${playerState === 'entering' ? 'animate-slideUp' : 'animate-slideUpComplete'}`}
+                            >
+                                <BroadcastPlayer player={player} />
+                            </div>
+                        );
+                    })}
+                </div>
+            ))}
+            <BroadcastBoard cards={board} />
+        </>
     );
 }
 
