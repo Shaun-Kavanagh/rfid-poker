@@ -2,13 +2,23 @@
 
 ![demo](./docs/media/demo.gif)
 
-> **Home table fork.** This fork of [whywaita/rfid-poker](https://github.com/whywaita/rfid-poker) is being adapted for a 10-player home game streamed with OBS. See the [build plan](./docs/home-table/build-plan.md) for the hardware design, costs, phases and progress.
+> **Home table fork.** This fork of [whywaita/rfid-poker](https://github.com/whywaita/rfid-poker) is being adapted for a 10-player home game streamed with OBS. See the [build plan](./docs/home-table/build-plan.md) for the hardware design, costs, phases, progress and the decisions behind them.
+>
+> **Design:**
+> - One M5Stack Core2 drives 16 RFID Unit 2 readers through 3 I2C hubs:
+>   - one reader per seat, reading both hole cards,
+>   - 5 readers for the board,
+>   - 1 for the muck.
+> - Seats are identified by hub channel.
+> - The Core2 connects to the Mac over USB.
 >
 > Changes so far:
 > - `docker compose` setup for running on a Mac.
 > - A table simulator.
 > - Faster equity: preflop is sampled, and recalculations are collapsed.
 > - A native arm64 Docker image.
+> - The `/broadcast` overlay fits 10 players and shows the board.
+> - Core2 test firmware for reading two stacked cards on one reader (`clients/m5stack-core2-tagtest`).
 
 ## Requirements
 
